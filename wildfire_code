@@ -1,0 +1,235 @@
+//traffic lights
+int citygreen = 7;
+int cityyellow = 2;
+int cityred = 3;
+int forestgreen = 4;
+int forestyellow = 5;
+int forestred = 6;
+int flamepin = 8;
+int flameval;
+int blocked = 0;
+int carcount = 0;
+//ultrasonic
+int trig = 9;
+int echo = 10;
+long duration;
+int distance;
+int dist;
+int distold;
+//temperature
+int val;
+int temp = 1; //Analog input 1
+float mv;
+float c;
+float celcius;
+//fire
+int fireflag = 0;
+//water
+int water = 11;
+//reset button
+int button = 12;
+int buttonval = 0;
+
+void setup() {
+  // initialisation of I/Os
+  pinMode(citygreen, OUTPUT);
+  pinMode(cityyellow, OUTPUT);
+  pinMode(cityred, OUTPUT);
+  pinMode(forestgreen, OUTPUT);
+  pinMode(forestyellow, OUTPUT);
+  pinMode(forestred, OUTPUT);
+  pinMode(trig, OUTPUT);
+  pinMode (echo, INPUT);
+  pinMode (flamepin, INPUT);
+  pinMode(water, OUTPUT);
+  pinMode (button, INPUT);
+  Serial.begin(9600);
+}
+
+void loop() {
+  // initialisation of the traffic ligts
+
+  digitalWrite (citygreen, HIGH);
+  digitalWrite (cityyellow, LOW);
+  digitalWrite (cityred, LOW);
+  digitalWrite (forestgreen, LOW);
+  digitalWrite (forestyellow, LOW);
+  digitalWrite (forestred, HIGH);
+
+
+  carcount = 0;
+  Serial.print ("Distance: ");
+  Serial.println(dist);
+  Serial.print ("carcount: ");
+  Serial.println(carcount);
+  Serial.print ("buttonval: ");
+  Serial.println(buttonval);
+
+  //checking the temperature sensor
+  celcius = temp_sensor();
+  if (celcius > 30) {
+    delay(2000);
+    celcius = temp_sensor();
+    if (celcius > 30) {
+      fireflag = 1;
+    }
+
+  }
+
+  //checking the flame sensor
+  flameval = digitalRead(flamepin); //checking for fire indication
+  if (flameval == HIGH) {
+    delay (3000);
+    flameval = digitalRead(flamepin); //doublechecking for fire
+
+    if (flameval == HIGH) {
+      fireflag = 1;
+    }
+
+
+  }
+  Serial.println(fireflag);
+
+  if (fireflag == 1) {
+    digitalWrite (water, HIGH); // start throwing water, if fire alarm is on
+  }
+  else
+  {
+    digitalWrite (water, LOW);
+  }
+
+  //check if reset button is pressed.
+  buttonval = digitalRead(button);
+  if (buttonval == HIGH) {
+    fireflag = 0;
+  }
+
+  // checking the existance of the car under the sensor
+
+
+  dist =  ultrasonic();
+  if (dist < 10 && fireflag == 0) {
+    delay (3000);
+    // double checking the exestance of the car under the sensor to avoid wrong entry
+    dist =  ultrasonic();
+
+    if (dist < 10 && fireflag == 0) {
+      delay (4000);
+      digitalWrite (citygreen, LOW);
+      digitalWrite (cityyellow, HIGH);
+      delay (2000);
+      digitalWrite (cityyellow, LOW);
+      digitalWrite (cityred, HIGH);
+      delay (1000);
+      digitalWrite (forestgreen, HIGH);
+      digitalWrite (forestred, LOW);
+      delay (3000);
+      digitalWrite (forestyellow, HIGH);
+      digitalWrite (forestgreen, LOW);
+      delay(2000);
+      digitalWrite (forestyellow, LOW);
+      digitalWrite (forestred, HIGH);
+      delay (1000);
+
+    }
+  }
+  // checking the existance of car under the sensor with fire alarm on.
+  if (dist < 10 && fireflag != 0) {
+
+    digitalWrite (citygreen, LOW);
+    digitalWrite (cityyellow, HIGH);
+    delay (2000);
+    digitalWrite (cityyellow, LOW);
+    digitalWrite (cityred, HIGH);
+    delay (1000);
+    digitalWrite (forestgreen, HIGH);
+    digitalWrite (forestred, LOW);
+    delay (3000);
+
+
+    dist =  ultrasonic();
+    if (buttonval == HIGH) {
+      fireflag = 0;
+    }
+    while ( dist < 10 && carcount <= 3 && fireflag != 0) {
+      delay (4000);
+      carcount++;
+
+      if (buttonval == HIGH) {
+        fireflag = 0;
+      }
+      dist =  ultrasonic();
+      Serial.print ("carcount: ");
+
+      Serial.println(carcount);
+      //check if reset button is pressed.
+      buttonval = digitalRead(button);
+
+    }
+    if (carcount <= 3) {
+      digitalWrite (forestgreen, LOW);
+      digitalWrite (forestyellow, HIGH);
+      delay (2000);
+    }
+  }
+
+  //after adequate time, the city road cars must be released
+  //and the drivers must drive without traffic lights, with the
+  //drivers of the forest road giving way.
+  if (carcount > 3) {
+    while (fireflag != 0 ) {
+      digitalWrite (citygreen, LOW);
+      digitalWrite (cityyellow, LOW);
+      digitalWrite (cityred, LOW);
+
+      digitalWrite (forestgreen, LOW);
+      digitalWrite (forestred, LOW);
+
+      digitalWrite (forestyellow, HIGH);
+      delay (2000);
+      digitalWrite (forestyellow, LOW);
+      delay (2000);
+      flameval = digitalRead(flamepin); //checking for fire indication
+      Serial.println(flameval);
+      celcius = temp_sensor();
+      //check if reset button is pressed.
+      buttonval = digitalRead(button);
+      if (buttonval == 1) {
+        fireflag = 0;
+      }
+    }
+
+  }
+
+
+} //end of program
+
+
+//function ultrasonic()
+int ultrasonic() // function declaration
+{
+  digitalWrite(trig, LOW);
+  delayMicroseconds (2);
+  digitalWrite(trig, HIGH);
+  delayMicroseconds (10);
+  digitalWrite(trig, LOW);
+
+  duration = pulseIn(echo, HIGH);
+  distance = duration * 0.034 / 2;
+  Serial.print ("Distance: ");
+  Serial.println(distance);
+  return distance;
+}
+
+// function temp_sensor
+float temp_sensor()
+{
+  val = analogRead (temp);
+  float mv = (val / 1024.0) * 5000; //conversion to Celcius Degrees
+  float c = mv / 10; //conversion to Celcius Degrees
+  Serial.print("Temperature= ");
+  Serial.print(c);
+  Serial.print("oC");
+  Serial.println();
+  return c;
+}
