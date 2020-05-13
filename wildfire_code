@@ -1,4 +1,4 @@
-//traffic lights
+//trsffic lights
 int citygreen = 7;
 int cityyellow = 2;
 int cityred = 3;
@@ -7,7 +7,7 @@ int forestyellow = 5;
 int forestred = 6;
 int flamepin = 8;
 int flameval;
-int blocked = 0;
+
 int carcount = 0;
 //ultrasonic
 int trig = 9;
@@ -29,6 +29,9 @@ int water = 11;
 //reset button
 int button = 12;
 int buttonval = 0;
+// manual button
+int manual=13;
+int manualval=0;
 
 void setup() {
   // initialisation of I/Os
@@ -43,6 +46,7 @@ void setup() {
   pinMode (flamepin, INPUT);
   pinMode(water, OUTPUT);
   pinMode (button, INPUT);
+  pinMode (manual, INPUT);
   Serial.begin(9600);
 }
 
@@ -64,6 +68,10 @@ void loop() {
   Serial.println(carcount);
   Serial.print ("buttonval: ");
   Serial.println(buttonval);
+  manualval = digitalRead(manual);
+  if (manualval == HIGH) {
+    fireflag = 1;
+  }
 
   //checking the temperature sensor
   celcius = temp_sensor();
@@ -74,6 +82,10 @@ void loop() {
       fireflag = 1;
     }
 
+ manualval = digitalRead(manual);
+  if (manualval == HIGH) {
+    fireflag = 1;
+  }
   }
 
   //checking the flame sensor
@@ -86,7 +98,10 @@ void loop() {
       fireflag = 1;
     }
 
-
+manualval = digitalRead(manual);
+  if (manualval == HIGH) {
+    fireflag = 1;
+  }
   }
   Serial.println(fireflag);
 
@@ -112,7 +127,10 @@ void loop() {
     delay (3000);
     // double checking the exestance of the car under the sensor to avoid wrong entry
     dist =  ultrasonic();
-
+manualval = digitalRead(manual);
+  if (manualval == HIGH) {
+    fireflag = 1;
+  }
     if (dist < 10 && fireflag == 0) {
       delay (4000);
       digitalWrite (citygreen, LOW);
@@ -133,6 +151,10 @@ void loop() {
 
     }
   }
+  manualval = digitalRead(manual);
+  if (manualval == HIGH) {
+    fireflag = 1;
+  }
   // checking the existance of car under the sensor with fire alarm on.
   if (dist < 10 && fireflag != 0) {
 
@@ -148,13 +170,15 @@ void loop() {
 
 
     dist =  ultrasonic();
+    buttonval = digitalRead(button);
     if (buttonval == HIGH) {
       fireflag = 0;
     }
     while ( dist < 10 && carcount <= 3 && fireflag != 0) {
       delay (4000);
       carcount++;
-
+      
+      buttonval = digitalRead(button);
       if (buttonval == HIGH) {
         fireflag = 0;
       }
